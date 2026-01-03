@@ -385,8 +385,11 @@ if (commandName === "panel-timer") {
     });
   }
 }
+let subcommand: string | null = null;
+try {
+  subcommand = interaction.options.getSubcommand();
+} catch {}
 
-  const subcommand = interaction.options.getSubcommand();
 
   if (subcommand === "setup") {
     if (!interaction.memberPermissions?.has(PermissionsBitField.Flags.Administrator)) {
