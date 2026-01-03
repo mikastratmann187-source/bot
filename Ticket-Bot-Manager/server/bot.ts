@@ -44,6 +44,58 @@ client.once("ready", () => {
   console.log("----------------------------------------");
   registerSlashCommands().catch(console.error);
 });
+// Panel Timer Variablen
+let panelTimer: NodeJS.Timeout | null = null;
+
+const CATEGORY_ID = "1455960033576751186";   // Kategorie-ID
+const CHANNEL_ID = "1455272687227244574";    // Textkanal-ID
+const GUILD_ID = "1389540270139244647";      // Server-ID
+
+// Funktion: altes Panel löschen + neues senden
+async function sendPanelWithCleanup() {
+  try {
+    const guild = client.guilds.cache.get(GUILD_ID);
+    if (!guild) return;
+
+    const channel = guild.channels.cache.get(CHANNEL_ID) as TextChannel;
+    if (!channel || !channel.isTextBased()) return;
+
+    // Alte Panels löschen
+    const messages = await channel.messages.fetch({ limit: 20 });
+    const oldPanels = messages.filter(
+      m => m.author.id === client.user?.id && m.content === "!setup_panel"
+    );
+
+    for (const msg of oldPanels.values()) {
+      await msg.delete().catch(() => {});
+    }
+
+    // Neues Panel senden
+    await channel.send("!setup_panel");
+    console.log("📩 Neues Panel gesendet (altes gelöscht)");
+
+  } catch (err) {
+    console.error("Fehler beim Panel-Senden:", err);
+  }
+}
+
+// Timer starten
+function startPanelTimer() {
+  if (panelTimer) return false; // läuft schon
+  panelTimer = setInterval(sendPanelWithCleanup, 15 * 60 * 1000);
+  sendPanelWithCleanup(); // sofort einmal ausführen
+  return true;
+}
+
+// Timer stoppen
+function stopPanelTimer() {
+  if (!panelTimer) return false;
+  clearInterval(panelTimer);
+  panelTimer = null;
+  return true;
+}
+
+
 
 async function startBotProcess() {
   const token = process.env.DISCORD_TOKEN;
@@ -288,6 +340,37 @@ async function handleSlashCommand(interaction: ChatInputCommandInteraction) {
     await updateAllPanels(interaction.guild!);
     return;
   }
+ // PANEL TIMER SLASH COMMAND
+if (commandName === "panel-timer") {
+  if (!interaction.memberPermissions?.has(PermissionsBitField.Flags.Administrator)) {
+    return interaction.reply({ content: "Nur Admins können den Timer steuern.", ephemeral: true });
+  }
+
+  const action = interaction.options.getString("action");
+
+  if (action === "start") {
+    const started = startPanelTimer();
+    return interaction.reply({
+      content: started ? "⏱️ Panel-Timer gestartet!" : "⏱️ Timer läuft bereits.",
+      ephemeral: true
+    });
+  }
+
+  if (action === "stop") {
+    const stopped = stopPanelTimer();
+    return interaction.reply({
+      content: stopped ? "⏹️ Panel-Timer gestoppt." : "⏹️ Timer war nicht aktiv.",
+      ephemeral: true
+    });
+  }
+
+  if (action === "status") {
+    return interaction.reply({
+      content: panelTimer ? "🟢 Timer läuft." : "🔴 Timer ist gestoppt.",
+      ephemeral: true
+    });
+  }
+}
 
   const subcommand = interaction.options.getSubcommand();
 
@@ -420,6 +503,31 @@ async function handleButton(interaction: ButtonInteraction) {
 client.on("messageCreate", async (message) => {
   if (!message.guild || message.author.bot) return;
   if (!message.member?.permissions.has(PermissionsBitField.Flags.Administrator)) return;
+// PANEL TIMER STEUERUNG
+if (message.content.startsWith("!panel-timer")) {
+  const args = message.content.split(" ");
+  const action = args[1];
+
+  if (!action) {
+    return message.reply("Nutze: `!panel-timer start`, `!panel-timer stop`, `!panel-timer status`");
+  }
+
+  if (action === "start") {
+    const started = startPanelTimer();
+    return message.reply(started ? "⏱️ Panel-Timer gestartet!" : "⏱️ Timer läuft bereits.");
+  }
+
+  if (action === "stop") {
+    const stopped = stopPanelTimer();
+    return message.reply(stopped ? "⏹️ Panel-Timer gestoppt." : "⏹️ Timer war nicht aktiv.");
+  }
+
+  if (action === "status") {
+    return message.reply(panelTimer ? "🟢 Timer läuft." : "🔴 Timer ist gestoppt.");
+  }
+
+  return message.reply("Ungültige Aktion. Nutze: `start`, `stop`, `status`");
+}
 
   if (message.content === "!setup_rules") {
     const embed = new EmbedBuilder()
