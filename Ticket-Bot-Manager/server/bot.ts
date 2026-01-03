@@ -81,6 +81,12 @@ async function sendPanelWithCleanup() {
     console.error("Fehler beim Panel-Senden:", err);
   }
 }
+function startPanelTimer() {
+  if (panelTimer) return false; // läuft schon
+  panelTimer = setInterval(sendPanelWithCleanup, 15 * 60 * 1000);
+  sendPanelWithCleanup(); // sofort einmal ausführen
+  return true;
+}
 
 // Timer stoppen
 function stopPanelTimer() {
