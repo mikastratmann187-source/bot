@@ -44,6 +44,26 @@ client.once("ready", () => {
   console.log("----------------------------------------");
   registerSlashCommands().catch(console.error);
 });
+// Dynamischer Status alle 2 Minuten
+const statuses = [
+  { name: "BLÖDE TICKETS SORTIEREN", type: 0 },     // Playing
+  { name: "BEI  SUPPORT GESPRÄCHEN", type: 2 }, // Listening
+  { name: "ÜBER DIE GEILE COMMUNITY", type: 3 },     // Watching
+  { name: "FÜR TWITCH AFFILIATE SNUSPAY", type: 5 }              // Competing
+];
+
+let index = 0;
+
+setInterval(() => {
+  const status = statuses[index];
+  client.user?.setPresence({
+    activities: [status],
+    status: "online"
+  });
+
+  index = (index + 1) % statuses.length; // weiter zum nächsten Status
+}, 2 * 60 * 1000); // 2 Minuten
+
 // Panel Timer Variablen
 let panelTimer: NodeJS.Timeout | null = null;
 
