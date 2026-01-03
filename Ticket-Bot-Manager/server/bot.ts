@@ -184,6 +184,20 @@ async function registerSlashCommands() {
              { name: "Supporter-Bewerbung", value: "supporter" }
            )),
     new SlashCommandBuilder()
+  .setName("panel-timer")
+  .setDescription("Steuert den automatischen Panel-Timer")
+  .addStringOption(opt =>
+    opt.setName("action")
+       .setDescription("start | stop | status")
+       .setRequired(true)
+       .addChoices(
+         { name: "Starten", value: "start" },
+         { name: "Stoppen", value: "stop" },
+         { name: "Status anzeigen", value: "status" }
+       )
+  ),
+
+    new SlashCommandBuilder()
       .setName("ticket")
       .setDescription("Ticket System Management")
       .addSubcommand(sub => 
