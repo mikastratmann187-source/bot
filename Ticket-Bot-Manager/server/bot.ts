@@ -51,7 +51,9 @@ const CATEGORY_ID = "1455960033576751186";   // Kategorie-ID
 const CHANNEL_ID = "1455272687227244574";    // Textkanal-ID
 const GUILD_ID = "1389540270139244647";      // Server-ID
 
-// Funktion: altes Panel löschen + neues senden
+
+
+
 async function sendPanelWithCleanup() {
   try {
     const guild = client.guilds.cache.get(GUILD_ID);
@@ -63,28 +65,21 @@ async function sendPanelWithCleanup() {
     // Alte Panels löschen
     const messages = await channel.messages.fetch({ limit: 20 });
     const oldPanels = messages.filter(
-      m => m.author.id === client.user?.id && m.content === "!setup_panel"
+      m => m.author.id === client.user?.id && m.embeds.length > 0
     );
 
     for (const msg of oldPanels.values()) {
       await msg.delete().catch(() => {});
     }
 
-    // Neues Panel senden
-    await channel.send("!setup_panel");
+    // Neues Panel direkt erstellen
+    await createPanel(GUILD_ID, CHANNEL_ID);
+
     console.log("📩 Neues Panel gesendet (altes gelöscht)");
 
   } catch (err) {
     console.error("Fehler beim Panel-Senden:", err);
   }
-}
-
-// Timer starten
-function startPanelTimer() {
-  if (panelTimer) return false; // läuft schon
-  panelTimer = setInterval(sendPanelWithCleanup, 15 * 60 * 1000);
-  sendPanelWithCleanup(); // sofort einmal ausführen
-  return true;
 }
 
 // Timer stoppen
@@ -515,6 +510,61 @@ async function handleButton(interaction: ButtonInteraction) {
     );
     await interaction.showModal(modal);
   }
+}
+async function createPanel(guildId: string, channelId: string) {
+  const guild = client.guilds.cache.get(guildId);
+  if (!guild) return;
+
+  const channel = guild.channels.cache.get(channelId) as TextChannel;
+  if (!channel) return;
+
+  const config = await storage.getConfig(guildId);
+
+  const embed = new EmbedBuilder()
+    .setTitle("📩 Hilfe & Kontakt Center")
+    .setDescription(
+      "Willkommen im Support-Bereich von **MIKA'S COMMUNITY**!\n\n" +
+      "Hier kannst du direkt mit unserem Team in Kontakt treten. Wähle einfach die passende Kategorie aus dem Menü unten aus:\n\n" +
+      "❓ **Fragen & Hilfe**\nHast du allgemeine Fragen zum Server oder brauchst Hilfe bei einem Problem?\n\n" +
+      "🛡️ **Moderator Bewerbung**\nDu möchtest uns unterstützen und für Ordnung sorgen? Bewirb dich hier!\n\n" +
+      "🤝 **Supporter Bewerbung**\nDu hilfst gerne anderen Usern und möchtest Teil des Teams werden?\n\n" +
+      "*Hinweis: Bitte erstelle nur ein Ticket, wenn es wirklich nötig ist. Missbrauch kann zu Sanktionen führen.*"
+    )
+    .setColor(0x5865F2)
+    .setThumbnail(client.user?.displayAvatarURL() || null);
+
+  const modLabel = config?.modAppsOpen === 0 ? "Bewerbung Mod (Aktuell Geschlossen)" : "Bewerbung Mod (Offen)";
+  const supporterLabel = config?.supporterAppsOpen === 0 ? "Bewerbung Supporter (Aktuell Geschlossen)" : "Bewerbung Supporter (Offen)";
+
+  const select = new StringSelectMenuBuilder()
+    .setCustomId("ticket_select")
+    .setPlaceholder("Wähle dein Anliegen aus...")
+    .addOptions(
+      new StringSelectMenuOptionBuilder()
+        .setLabel("Fragen & Hilfe")
+        .setDescription("Allgemeine Anfragen an das Team")
+        .setValue("question")
+        .setEmoji("❓"),
+      new StringSelectMenuOptionBuilder()
+        .setLabel("Vorschläge & Ideen")
+        .setDescription("Teile deine Ideen für Twitch & Discord")
+        .setValue("suggestion")
+        .setEmoji("💡"),
+      new StringSelectMenuOptionBuilder()
+        .setLabel(modLabel)
+        .setDescription("Bewirb dich als Moderator")
+        .setValue("mod")
+        .setEmoji("🛡️"),
+      new StringSelectMenuOptionBuilder()
+        .setLabel(supporterLabel)
+        .setDescription("Bewirb dich als Supporter")
+        .setValue("supporter")
+        .setEmoji("🤝")
+    );
+
+  const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(select);
+
+  await channel.send({ embeds: [embed], components: [row] });
 }
 
 client.on("messageCreate", async (message) => {
